@@ -3,9 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
@@ -45,7 +45,7 @@ func ReadConfig(configFile string) kafka.ConfigMap {
 
 }
 
-func pruducer(key string, value string) {
+func pruducer(quantity int) {
 
 	if len(os.Args) != 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %s <config-file-path>\n",
@@ -79,16 +79,13 @@ func pruducer(key string, value string) {
 		}
 	}()
 
-	keys := [...]string{key}
-	values := [...]string{value}
-
-	for n := 0; n < len(keys); n++ {
-		key := keys[rand.Intn(len(keys))]
-		data := values[rand.Intn(len(values))]
+	for n := 0; n < quantity; n++ {
+		key := "order"
+		data := n
 		p.Produce(&kafka.Message{
 			TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
 			Key:            []byte(key),
-			Value:          []byte(data),
+			Value:          []byte(fmt.Sprintf("%d", data)),
 		}, nil)
 	}
 
@@ -99,10 +96,14 @@ func pruducer(key string, value string) {
 }
 
 func handler(c *gin.Context) {
-	key := c.Query("key")
-	value := c.Query("value")
-	pruducer(key, value)
-	c.JSON(http.StatusOK, gin.H{"message": value})
+	quantityString := c.Query("quantity")
+	quantity, err := strconv.Atoi(quantityString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid quantity"})
+		return
+	}
+	pruducer(quantity)
+	c.JSON(http.StatusOK, gin.H{"message": "success"})
 }
 
 func main() {
