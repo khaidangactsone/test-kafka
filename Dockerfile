@@ -14,6 +14,9 @@ COPY . .
 RUN go mod download
 RUN go mod verify
 
+# List contents of the /app directory to verify the binary exists
+RUN ls -l /app
+
 # Use a Docker multi-stage build to create a lean production image.
 # https://docs.docker.com/develop/develop-images/multistage-build/
 # Use the official Debian slim image for a lean production container.
