@@ -14,10 +14,6 @@ COPY . .
 RUN go mod download
 RUN go mod verify
 
-# Build the binary.
-# -o myapp specifies the output binary name "myapp".
-RUN CGO_ENABLED=0 GOOS=linux go build -v -o myapp
-
 # Use a Docker multi-stage build to create a lean production image.
 # https://docs.docker.com/develop/develop-images/multistage-build/
 # Use the official Debian slim image for a lean production container.
