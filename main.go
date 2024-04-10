@@ -131,7 +131,7 @@ func consumerHandler(con *gin.Context) {
 		os.Exit(1)
 	}
 
-	topic := "purchases"
+	topic := "toppic-khai"
 	err = c.SubscribeTopics([]string{topic}, nil)
 	// Set up a channel for handling Ctrl-C, etc
 	sigchan := make(chan os.Signal, 1)
