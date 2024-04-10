@@ -1,5 +1,5 @@
 # Sử dụng hình ảnh GoLang chính thức làm hình ảnh cơ sở
-FROM golang:1.20 as builder
+FROM golang:1.18 as builder
 
 # Thiết lập thư mục làm việc trong container
 WORKDIR /app
