@@ -91,7 +91,7 @@ func pruducer(quantity int) {
 	}
 
 	// Wait for all messages to be delivered
-	p.Flush(15 * 1000)
+	p.Flush()
 	p.Close()
 
 }
