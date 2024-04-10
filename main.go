@@ -107,6 +107,8 @@ func handler(c *gin.Context) {
 	pruducer(quantity)
 	endTime := time.Now()
 	elapsedTime := endTime.Sub(startTime)
+	// convert to milliseconds
+	elapsedTime = elapsedTime / time.Millisecond
 	c.JSON(http.StatusOK, gin.H{"message": elapsedTime})
 }
 
