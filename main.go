@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/gin-gonic/gin"
@@ -96,6 +97,7 @@ func pruducer(quantity int) {
 }
 
 func handler(c *gin.Context) {
+	startTime := time.Now()
 	quantityString := c.Query("quantity")
 	quantity, err := strconv.Atoi(quantityString)
 	if err != nil {
@@ -103,7 +105,9 @@ func handler(c *gin.Context) {
 		return
 	}
 	pruducer(quantity)
-	c.JSON(http.StatusOK, gin.H{"message": "success"})
+	endTime := time.Now()
+	elapsedTime := endTime.Sub(startTime)
+	c.JSON(http.StatusOK, gin.H{"message": elapsedTime})
 }
 
 func main() {
