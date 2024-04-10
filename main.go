@@ -92,7 +92,7 @@ import (
 
 // }
 
-func router(c *gin.Context) {
+func handler(c *gin.Context) {
 	name := c.Query("name")
 
 	c.JSON(http.StatusOK, gin.H{"message": name})
@@ -102,7 +102,7 @@ func main() {
 	router := gin.Default()
 
 	// Define a GET request handler at '/'
-	router.GET("/", pruducer)
+	router.GET("/", handler)
 
 	// Start the server on port 8080
 	router.Run(":8089")
