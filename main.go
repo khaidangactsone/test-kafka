@@ -168,5 +168,5 @@ func main() {
 	router.GET("/consumer", consumerHandler)
 
 	// Start the server on port 8080
-	router.Run(":8089")
+	router.Run(":8090")
 }
