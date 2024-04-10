@@ -1,36 +1,29 @@
-# Use the official Golang image to create a build artifact.
-# This is based on Debian and sets the GOPATH to /go.
-# https://hub.docker.com/_/golang
+# Sử dụng hình ảnh GoLang chính thức làm hình ảnh cơ sở
 FROM golang:1.20 as builder
 
-# Create and change to the app directory.
+# Thiết lập thư mục làm việc trong container
 WORKDIR /app
 
-# Copy local code to the container image.
+# Sao chép mã nguồn vào container
 COPY . .
 
-# Resolve application dependencies.
-# Using go mod with Go 1.11 modules or later.
-RUN go mod download
-RUN go mod verify
+# Cài đặt các phụ thuộc (nếu ứng dụng của bạn có bất kỳ)
+# RUN go mod download
 
-# Build the Go app
-RUN go build -v -o myapp .
+# Biên dịch ứng dụng Go
+RUN go build -o main .
 
-# List contents of the /app directory to verify the binary exists
-RUN ls -l /app
+# Sử dụng hình ảnh nhỏ gọn để chạy
+FROM alpine:latest  
+RUN apk --no-cache add ca-certificates
 
-# Use a Docker multi-stage build to create a lean production image.
-# https://docs.docker.com/develop/develop-images/multistage-build/
-# Use the official Debian slim image for a lean production container.
-# https://hub.docker.com/_/debian
-FROM debian:buster-slim
+WORKDIR /root/
 
-# Copy the binary to the production image from the builder stage.
-COPY --from=builder /app/myapp /myapp
+# Copy tệp biên dịch từ bước builder vào thư mục làm việc
+COPY --from=builder /app/main .
 
-# Set the binary as the entrypoint of the container.
-ENTRYPOINT ["/myapp"]
+# Mở cổng 8080
+EXPOSE 8080
 
-# Service listens on port 8090.
-EXPOSE 8090
+# Chạy ứng dụng
+CMD ["./main"]
