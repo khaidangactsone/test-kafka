@@ -46,26 +46,30 @@ func ReadConfig(configFile string) kafka.ConfigMap {
 
 }
 
-func pruducer(quantity int) {
-
+func producer(quantity int) {
 	if len(os.Args) != 2 {
-		fmt.Fprintf(os.Stderr, "Usage: %s <config-file-path>\n",
-			os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s <config-file-path>\n", os.Args[0])
 		os.Exit(1)
 	}
 	configFile := os.Args[1]
 	conf := ReadConfig(configFile)
 
-	topic := "toppic-khai"
-	p, err := kafka.NewProducer(&conf)
+	// Adjusting the producer configuration for higher performance
+	conf.Producer.Return.Successes = true
+	conf.Producer.Return.Errors = true
+	conf.Producer.Flush.Frequency = 500                 // Flush batches every 500ms
+	conf.Producer.Flush.MaxMessages = 10000             // Flush when we have 10,000 messages ready to send
+	conf.Producer.RequiredAcks = kafka.WaitForAll       // Wait for full acknowledgement
+	conf.Producer.Retry.Max = 5                         // Retry up to 5 times
+	conf.Producer.Compression = kafka.CompressionSnappy // Use snappy compression
 
+	topic := "topic-khai"
+	p, err := kafka.NewProducer(&conf)
 	if err != nil {
 		fmt.Printf("Failed to create producer: %s", err)
 		os.Exit(1)
 	}
 
-	// Go-routine to handle message delivery reports and
-	// possibly other event types (errors, stats, etc)
 	go func() {
 		for e := range p.Events() {
 			switch ev := e.(type) {
@@ -93,7 +97,6 @@ func pruducer(quantity int) {
 	// Wait for all messages to be delivered
 	p.Flush(15 * 1000)
 	p.Close()
-
 }
 
 func handler(c *gin.Context) {
