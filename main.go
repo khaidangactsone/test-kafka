@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
 	"strings"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
+	"github.com/gin-gonic/gin"
 )
 
 func ReadConfig(configFile string) kafka.ConfigMap {
@@ -43,8 +45,8 @@ func ReadConfig(configFile string) kafka.ConfigMap {
 
 }
 
-func main() {
-
+func pruducer(c *gin.Context) {
+	name := c.Query("name")
 	if len(os.Args) != 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %s <config-file-path>\n",
 			os.Args[0])
@@ -77,8 +79,8 @@ func main() {
 		}
 	}()
 
-	users := [...]string{"eabara", "jsmith", "sgarcia", "jbernard", "htanaka", "awalther"}
-	items := [...]string{"book", "alarm clock", "t-shirts", "gift card", "batteries"}
+	users := [...]string{name}
+	items := [...]string{name}
 
 	for n := 0; n < 10; n++ {
 		key := users[rand.Intn(len(users))]
@@ -93,4 +95,16 @@ func main() {
 	// Wait for all messages to be delivered
 	p.Flush(15 * 1000)
 	p.Close()
+
+	c.JSON(http.StatusOK, gin.H{"message": name})
+}
+
+func main() {
+	router := gin.Default()
+
+	// Define a GET request handler at '/'
+	router.GET("/", pruducer)
+
+	// Start the server on port 8080
+	router.Run(":8081")
 }
