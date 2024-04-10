@@ -154,7 +154,7 @@ func consumerHandler(con *gin.Context) {
 				*ev.TopicPartition.Topic, string(ev.Key), string(ev.Value))
 		}
 	}
-
+	fmt.Println("---------------")
 	c.Close()
 	con.JSON(http.StatusOK, gin.H{"message": "Consumer is closed"})
 }

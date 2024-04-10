@@ -15,5 +15,11 @@ RUN go mod tidy
 # Build the Go app
 RUN go build -o main .
 
-# Command to run the executable
-CMD ["./main", "config.txt"]
+# Copy the binary to the production image from the builder stage.
+COPY --from=builder /app/myapp /myapp
+
+# Copy the configuration file into the container image
+COPY getting-started.properties /getting-started.properties
+
+# Run the web service on container startup.
+CMD ["/myapp"]
