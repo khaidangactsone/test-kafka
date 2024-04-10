@@ -45,7 +45,7 @@ func ReadConfig(configFile string) kafka.ConfigMap {
 
 }
 
-func pruducer(name string) {
+func pruducer(key string, value string) {
 
 	if len(os.Args) != 2 {
 		fmt.Fprintf(os.Stderr, "Usage: %s <config-file-path>\n",
@@ -79,12 +79,12 @@ func pruducer(name string) {
 		}
 	}()
 
-	users := [...]string{name}
-	items := [...]string{name}
+	keys := [...]string{key}
+	values := [...]string{value}
 
-	for n := 0; n < 10; n++ {
-		key := users[rand.Intn(len(users))]
-		data := items[rand.Intn(len(items))]
+	for n := 0; n < len(keys); n++ {
+		key := keys[rand.Intn(len(keys))]
+		data := values[rand.Intn(len(values))]
 		p.Produce(&kafka.Message{
 			TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
 			Key:            []byte(key),
@@ -99,9 +99,10 @@ func pruducer(name string) {
 }
 
 func handler(c *gin.Context) {
-	name := c.Query("name")
-	pruducer(name)
-	c.JSON(http.StatusOK, gin.H{"message": name})
+	key := c.Query("key")
+	value := c.Query("value")
+	pruducer(key, value)
+	c.JSON(http.StatusOK, gin.H{"message": value})
 }
 
 func main() {
