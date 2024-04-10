@@ -8,7 +8,7 @@ WORKDIR /app
 COPY . .
 
 # Cài đặt các phụ thuộc (nếu ứng dụng của bạn có bất kỳ)
-# RUN go mod download
+RUN go mod download
 
 # Biên dịch ứng dụng Go
 RUN go build -o main .
