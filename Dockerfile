@@ -6,6 +6,8 @@ FROM golang:1.20.4
 # Bypass the proxy for module downloads
 ENV GOPROXY=direct
 
+RUN CGO_ENABLED=0 GOOS=linux
+
 WORKDIR /app
 
 # Copy the local configuration file to the container
