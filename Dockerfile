@@ -2,6 +2,10 @@
 FROM golang:1.20
 
 # Set the working directory inside the container
+
+# Bypass the proxy for module downloads
+ENV GOPROXY=direct
+
 WORKDIR /app
 
 # Copy the local configuration file to the container
