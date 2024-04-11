@@ -10,11 +10,8 @@ COPY . .
 # Download all the dependencies
 RUN go mod download
 
-# Build the application
-RUN go build -o main .
-
 # Expose the port the app runs on
 EXPOSE 8090
 
-# Run the application
-CMD ["./main"]
+# Run the application with "go run", passing "getting-started.properties" as an argument
+CMD ["go", "run", "main.go", "getting-started.properties"]
