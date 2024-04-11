@@ -1,26 +1,20 @@
-FROM golang:1.18 as builder
+# Use the official Go image as a parent image
+FROM golang:1.18
 
+# Set the working directory inside the container
 WORKDIR /app
 
+# Copy the local configuration file to the container
 COPY . .
 
+# Download all the dependencies
 RUN go mod download
 
+# Build the application
 RUN go build -o main .
 
-FROM alpine:latest  
-RUN apk --no-cache add ca-certificates
-
-WORKDIR /root/
-
-COPY --from=builder /app/main .
-
-# Thêm lệnh kiểm tra tệp thực thi
-RUN ls -l /root/main
-
-# Thêm quyền thực thi
-RUN chmod +x /root/main
-
+# Expose the port the app runs on
 EXPOSE 8090
 
+# Run the application
 CMD ["./main"]
