@@ -1,23 +1,33 @@
-# Use the official Go image as a parent image
-FROM golang:1.20.4
+# Start from the official Go image to build our application
+FROM golang:1.20.4 as builder
 
-# Set the working directory inside the container
-
-# Bypass the proxy for module downloads
-ENV GOPROXY=direct
-
-RUN CGO_ENABLED=0 GOOS=linux
-
+# Set the Current Working Directory inside the container
 WORKDIR /app
 
-# Copy the local configuration file to the container
-COPY . .
+# Copy go mod and sum files
+COPY go.mod go.sum ./
 
-# Download all the dependencies
+# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
 RUN go mod download
 
-# Expose the port the app runs on
+# Copy the source from the current directory to the Working Directory inside the container
+COPY . .
+
+# Build the Go app
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+
+######## Start a new stage from scratch #######
+# This is the final stage where the executable is run in a clean image
+FROM alpine:latest  
+
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+# Copy the Pre-built binary file from the previous stage
+COPY --from=builder /app/main .
+
+# Expose port 8090 to the outside world
 EXPOSE 8090
 
-# Run the application with "go run", passing "getting-started.properties" as an argument
 CMD ["go", "run", "main.go", "getting-started.properties"]
