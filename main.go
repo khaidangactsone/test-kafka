@@ -24,11 +24,6 @@ func producerHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid quantity"})
 		return
 	}
-	defer func() {
-		if err := producer.Close(); err != nil {
-			panic(err)
-		}
-	}()
 
 	topic := "test_toppic_khai"
 	var messages []*sarama.ProducerMessage
