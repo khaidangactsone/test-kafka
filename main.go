@@ -196,6 +196,10 @@ func consumerStopHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Consumer is stopped"})
 }
 
+func noDataHandler(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{"message": "oke"})
+}
+
 func main() {
 	router := gin.Default()
 
@@ -205,6 +209,7 @@ func main() {
 	router.GET("/consumer", consumerHandler)
 	router.GET("/consumer-stop", consumerStopHandler)
 	router.POST("/producer", producerHasDataHandler)
+	router.GET("/no-data", noDataHandler)
 
 	// go consumerHandler()
 
