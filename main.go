@@ -15,6 +15,12 @@ import (
 )
 
 var producer sarama.SyncProducer
+var topic = "many_partitions"
+var consummerGroup = "group_many_partitions"
+
+var group sarama.ConsumerGroup
+
+var stopChan = make(chan struct{})
 
 func producerHandler(c *gin.Context) {
 	startTime := time.Now()
@@ -25,7 +31,6 @@ func producerHandler(c *gin.Context) {
 		return
 	}
 
-	topic := "test_toppic_khai"
 	var messages []*sarama.ProducerMessage
 
 	for i := 0; i < quantity; i++ {
@@ -67,7 +72,7 @@ func producerHasDataHandler(c *gin.Context) {
 	fmt.Println(payload)
 	payloadByte, _ := json.Marshal(payload)
 	var message sarama.ProducerMessage
-	message.Topic = "test_toppic_khai"
+	message.Topic = topic
 	message.Value = sarama.StringEncoder(payloadByte)
 
 	partition, offset, err := producer.SendMessage(&message)
@@ -92,25 +97,12 @@ func (ConsumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim
 }
 
 func consumerHandler(c *gin.Context) {
-	config := sarama.NewConfig()
-	config.Version = sarama.V2_5_0_0 // Specify appropriate Kafka version
-	config.Consumer.Return.Errors = true
-	group, err := sarama.NewConsumerGroup([]string{"192.168.2.45:9092"}, "test_group", config)
-	if err != nil {
-		panic(err)
-	}
-	defer func() {
-		if err := group.Close(); err != nil {
-			panic(err)
-		}
-	}()
-
+	stopChan = make(chan struct{})
 	consumer := ConsumerGroupHandler{}
 
 	ctx := context.Background()
-	topics := []string{"test_toppic_khai"}
+	topics := []string{topic}
 
-	stopChan := make(chan struct{})
 	go func() {
 		for {
 			if err := group.Consume(ctx, topics, consumer); err != nil {
@@ -121,7 +113,6 @@ func consumerHandler(c *gin.Context) {
 				return
 			case <-stopChan:
 				return
-
 			default:
 			}
 		}
@@ -130,10 +121,6 @@ func consumerHandler(c *gin.Context) {
 	// Wait for interrupt signal to gracefully shutdown the consumer
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, os.Interrupt)
-	go func() {
-		time.Sleep(3 * time.Second)
-		stopChan <- struct{}{}
-	}()
 	select {
 	case <-ctx.Done():
 		fmt.Println("terminating: context cancelled")
@@ -159,6 +146,19 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	config := sarama.NewConfig()
+	config.Version = sarama.V2_5_0_0 // Specify appropriate Kafka version
+	config.Consumer.Return.Errors = true
+	group, err = sarama.NewConsumerGroup([]string{"192.168.2.45:9092"}, consummerGroup, config)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func consumerStopHandler(c *gin.Context) {
+	close(stopChan)
+	c.JSON(http.StatusOK, gin.H{"message": "Consumer is stopped"})
 }
 
 func main() {
@@ -167,6 +167,7 @@ func main() {
 	// Define a GET request handler at '/'
 	router.GET("/producer", producerHandler)
 	router.GET("/consumer", consumerHandler)
+	router.GET("/consumer-stop", consumerStopHandler)
 	router.POST("/producer", producerHasDataHandler)
 
 	// go consumerHandler()
