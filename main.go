@@ -14,7 +14,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func producerHandler(c *gin.Context, producer sarama.SyncProducer) {
+var producer sarama.SyncProducer
+
+func producerHandler(c *gin.Context) {
 	startTime := time.Now()
 	quantityString := c.Query("quantity")
 	quantity, err := strconv.Atoi(quantityString)
@@ -63,7 +65,7 @@ func producerHandler(c *gin.Context, producer sarama.SyncProducer) {
 	c.JSON(http.StatusOK, gin.H{"message": elapsedTime})
 }
 
-func producerHasDataHandler(c *gin.Context, producer sarama.SyncProducer) {
+func producerHasDataHandler(c *gin.Context) {
 	// startTime := time.Now()
 	var payload interface{}
 	c.BindJSON(&payload)
@@ -156,22 +158,21 @@ func consumerHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Consumer is stopped"})
 }
 
-func main() {
-	producer, err := sarama.NewSyncProducer([]string{"192.168.2.45:9092"}, nil)
+func init() {
+	var err error
+	producer, err = sarama.NewSyncProducer([]string{"192.168.2.45:9092"}, nil)
 	if err != nil {
 		panic(err)
 	}
-	defer producer.Close()
+}
+
+func main() {
 	router := gin.Default()
 
 	// Define a GET request handler at '/'
-	router.GET("/producer", func(c *gin.Context) {
-		producerHandler(c, producer)
-	})
+	router.GET("/producer", producerHandler)
 	router.GET("/consumer", consumerHandler)
-	router.POST("/producer", func(c *gin.Context) {
-		producerHasDataHandler(c, producer)
-	})
+	router.POST("/producer", producerHasDataHandler)
 
 	// go consumerHandler()
 
