@@ -14,18 +14,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func producerHandler(c *gin.Context) {
+func producerHandler(c *gin.Context, producer sarama.SyncProducer) {
 	startTime := time.Now()
 	quantityString := c.Query("quantity")
 	quantity, err := strconv.Atoi(quantityString)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid quantity"})
 		return
-	}
-	// Producer
-	producer, err := sarama.NewSyncProducer([]string{"192.168.2.45:9092"}, nil)
-	if err != nil {
-		panic(err)
 	}
 	defer func() {
 		if err := producer.Close(); err != nil {
@@ -68,16 +63,12 @@ func producerHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": elapsedTime})
 }
 
-func producerHasDataHandler(c *gin.Context) {
+func producerHasDataHandler(c *gin.Context, producer sarama.SyncProducer) {
 	// startTime := time.Now()
 	var payload interface{}
 	c.BindJSON(&payload)
 	fmt.Println(payload)
 	payloadByte, _ := json.Marshal(payload)
-	producer, err := sarama.NewSyncProducer([]string{"192.168.2.45:9092"}, nil)
-	if err != nil {
-		panic(err)
-	}
 	var message sarama.ProducerMessage
 	message.Topic = "test_toppic_khai"
 	message.Value = sarama.StringEncoder(payloadByte)
@@ -166,12 +157,21 @@ func consumerHandler(c *gin.Context) {
 }
 
 func main() {
+	producer, err := sarama.NewSyncProducer([]string{"192.168.2.45:9092"}, nil)
+	if err != nil {
+		panic(err)
+	}
+	defer producer.Close()
 	router := gin.Default()
 
 	// Define a GET request handler at '/'
-	router.GET("/producer", producerHandler)
+	router.GET("/producer", func(c *gin.Context) {
+		producerHandler(c, producer)
+	})
 	router.GET("/consumer", consumerHandler)
-	router.POST("/producer", producerHasDataHandler)
+	router.POST("/producer", func(c *gin.Context) {
+		producerHasDataHandler(c, producer)
+	})
 
 	// go consumerHandler()
 
