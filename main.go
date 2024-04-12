@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -67,6 +68,29 @@ func producerHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": elapsedTime})
 }
 
+func producerHasDataHandler(c *gin.Context) {
+	// startTime := time.Now()
+	var payload interface{}
+	c.BindJSON(&payload)
+	fmt.Println(payload)
+	payloadByte, _ := json.Marshal(payload)
+	producer, err := sarama.NewSyncProducer([]string{"192.168.2.45:9092"}, nil)
+	if err != nil {
+		panic(err)
+	}
+	var message sarama.ProducerMessage
+	message.Topic = "test_toppic_khai"
+	message.Value = sarama.StringEncoder(payloadByte)
+
+	partition, offset, err := producer.SendMessage(&message)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to send messages"})
+	}
+	fmt.Printf("Message is stored in topic(%s)/partition(%d)/offset(%d)\n", "test_toppic_khai", partition, offset)
+	c.JSON(http.StatusOK, gin.H{"message": payloadByte})
+}
+
 type ConsumerGroupHandler struct{}
 
 func (ConsumerGroupHandler) Setup(_ sarama.ConsumerGroupSession) error   { return nil }
@@ -79,7 +103,7 @@ func (ConsumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim
 	return nil
 }
 
-func consumerHandler() {
+func consumerHandler(c *gin.Context) {
 	config := sarama.NewConfig()
 	config.Version = sarama.V2_5_0_0 // Specify appropriate Kafka version
 	config.Consumer.Return.Errors = true
@@ -98,10 +122,19 @@ func consumerHandler() {
 	ctx := context.Background()
 	topics := []string{"test_toppic_khai"}
 
+	stopChan := make(chan struct{})
 	go func() {
 		for {
 			if err := group.Consume(ctx, topics, consumer); err != nil {
 				panic(err)
+			}
+			select {
+			case <-ctx.Done():
+				return
+			case <-stopChan:
+				return
+
+			default:
 			}
 		}
 	}()
@@ -109,12 +142,27 @@ func consumerHandler() {
 	// Wait for interrupt signal to gracefully shutdown the consumer
 	sigterm := make(chan os.Signal, 1)
 	signal.Notify(sigterm, os.Interrupt)
+	go func() {
+		time.Sleep(3 * time.Second)
+		stopChan <- struct{}{}
+	}()
 	select {
 	case <-ctx.Done():
 		fmt.Println("terminating: context cancelled")
 	case <-sigterm:
 		fmt.Println("terminating: via signal")
+	case <-stopChan:
+		fmt.Println("terminating: via signal")
+		break
 	}
+	defer func() {
+		fmt.Println("Consumer is stopped")
+		close(stopChan)
+		close(sigterm)
+		ctx.Done()
+	}()
+
+	c.JSON(http.StatusOK, gin.H{"message": "Consumer is stopped"})
 }
 
 func main() {
@@ -122,8 +170,10 @@ func main() {
 
 	// Define a GET request handler at '/'
 	router.GET("/producer", producerHandler)
+	router.GET("/consumer", consumerHandler)
+	router.POST("/producer", producerHasDataHandler)
 
-	go consumerHandler()
+	// go consumerHandler()
 
 	// Start the server on port 8080
 	router.Run(":8090")
