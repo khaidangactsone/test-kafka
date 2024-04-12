@@ -21,6 +21,7 @@ var consummerGroup = "group_many_partitions"
 var group sarama.ConsumerGroup
 
 var stopChan = make(chan struct{})
+var ctx = context.Background()
 
 func producerHandler(c *gin.Context) {
 	startTime := time.Now()
@@ -65,6 +66,36 @@ func producerHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": elapsedTime})
 }
 
+func producerOneHandler(c *gin.Context) {
+	startTime := time.Now()
+
+	msg := &sarama.ProducerMessage{
+		Topic: topic,
+		Value: sarama.StringEncoder(fmt.Sprintf("Message %d", 1)),
+	}
+
+	_, _, err := producer.SendMessage(msg)
+	if err != nil {
+		producerErrors, ok := err.(sarama.ProducerErrors)
+		if ok {
+			for _, err := range producerErrors {
+				fmt.Printf("Failed to send message: %s\n", err.Err)
+			}
+		} else {
+			fmt.Printf("Failed to send messages: %s\n", err)
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to send messages"})
+		return
+	} else {
+		fmt.Printf("%d messages sent to topic %s\n", 1, topic)
+	}
+
+	endTime := time.Now()
+	elapsedTime := endTime.Sub(startTime)
+	elapsedTime = elapsedTime / time.Millisecond
+	c.JSON(http.StatusOK, gin.H{"message": elapsedTime})
+}
+
 func producerHasDataHandler(c *gin.Context) {
 	// startTime := time.Now()
 	var payload interface{}
@@ -100,7 +131,7 @@ func consumerHandler(c *gin.Context) {
 	stopChan = make(chan struct{})
 	consumer := ConsumerGroupHandler{}
 
-	ctx := context.Background()
+	ctx = context.Background()
 	topics := []string{topic}
 
 	go func() {
@@ -110,8 +141,10 @@ func consumerHandler(c *gin.Context) {
 			}
 			select {
 			case <-ctx.Done():
+				fmt.Println("----------Done")
 				return
 			case <-stopChan:
+				fmt.Println("----------")
 				return
 			default:
 			}
@@ -157,7 +190,9 @@ func init() {
 }
 
 func consumerStopHandler(c *gin.Context) {
-	close(stopChan)
+	if stopChan != nil {
+		close(stopChan)
+	}
 	c.JSON(http.StatusOK, gin.H{"message": "Consumer is stopped"})
 }
 
@@ -165,6 +200,7 @@ func main() {
 	router := gin.Default()
 
 	// Define a GET request handler at '/'
+	router.GET("/producer-only", producerOneHandler)
 	router.GET("/producer", producerHandler)
 	router.GET("/consumer", consumerHandler)
 	router.GET("/consumer-stop", consumerStopHandler)
