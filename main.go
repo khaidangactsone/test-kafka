@@ -175,7 +175,7 @@ func consumerHandler(c *gin.Context) {
 
 func init() {
 	var err error
-	producer, err = sarama.NewSyncProducer([]string{"192.168.2.45:9092"}, nil)
+	producer, err = sarama.NewSyncProducer([]string{"192.168.2.39:9092"}, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -183,7 +183,7 @@ func init() {
 	config := sarama.NewConfig()
 	config.Version = sarama.V2_5_0_0 // Specify appropriate Kafka version
 	config.Consumer.Return.Errors = true
-	group, err = sarama.NewConsumerGroup([]string{"192.168.2.45:9092"}, consummerGroup, config)
+	group, err = sarama.NewConsumerGroup([]string{"192.168.2.39:9092"}, consummerGroup, config)
 	if err != nil {
 		panic(err)
 	}
@@ -209,7 +209,7 @@ func main() {
 	router.GET("/consumer", consumerHandler)
 	router.GET("/consumer-stop", consumerStopHandler)
 	router.POST("/producer", producerHasDataHandler)
-	router.GET("/no-data", noDataHandler)
+	router.GET("/ping", noDataHandler)
 
 	// go consumerHandler()
 
