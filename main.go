@@ -17,6 +17,7 @@ import (
 var producer sarama.SyncProducer
 var topic = "many_partitions"
 var consummerGroup = "group_many_partitions"
+var ip = "192.168.2.45:9092"
 
 var group sarama.ConsumerGroup
 
@@ -38,6 +39,55 @@ func producerHandler(c *gin.Context) {
 		msg := &sarama.ProducerMessage{
 			Topic: topic,
 			Value: sarama.StringEncoder(fmt.Sprintf("Message %d", i)),
+		}
+		// partition, offset, err := producer.SendMessage(msg)
+		messages = append(messages, msg)
+		// time.Sleep(1 * time.Second)
+	}
+
+	err = producer.SendMessages(messages)
+	if err != nil {
+		producerErrors, ok := err.(sarama.ProducerErrors)
+		if ok {
+			for _, err := range producerErrors {
+				fmt.Printf("Failed to send message: %s\n", err.Err)
+			}
+		} else {
+			fmt.Printf("Failed to send messages: %s\n", err)
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to send messages"})
+		return
+	} else {
+		fmt.Printf("%d messages sent to topic %s\n", quantity, topic)
+	}
+
+	endTime := time.Now()
+	elapsedTime := endTime.Sub(startTime)
+	elapsedTime = elapsedTime / time.Millisecond
+	c.JSON(http.StatusOK, gin.H{"message": elapsedTime})
+}
+
+func producerOrderHandler(c *gin.Context) {
+	startTime := time.Now()
+	quantityString := c.Query("quantity")
+	quantity, err := strconv.Atoi(quantityString)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid quantity"})
+		return
+	}
+
+	var messages []*sarama.ProducerMessage
+
+	for i := 0; i < quantity; i++ {
+		order := GenerateOrder()
+		orderBytes, err := json.Marshal(order)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to marshal order"})
+			return
+		}
+		msg := &sarama.ProducerMessage{
+			Topic: topic,
+			Value: sarama.StringEncoder(orderBytes),
 		}
 		// partition, offset, err := producer.SendMessage(msg)
 		messages = append(messages, msg)
@@ -175,7 +225,7 @@ func consumerHandler(c *gin.Context) {
 
 func init() {
 	var err error
-	producer, err = sarama.NewSyncProducer([]string{"192.168.2.39:9092"}, nil)
+	producer, err = sarama.NewSyncProducer([]string{ip}, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -183,7 +233,7 @@ func init() {
 	config := sarama.NewConfig()
 	config.Version = sarama.V2_5_0_0 // Specify appropriate Kafka version
 	config.Consumer.Return.Errors = true
-	group, err = sarama.NewConsumerGroup([]string{"192.168.2.39:9092"}, consummerGroup, config)
+	group, err = sarama.NewConsumerGroup([]string{ip}, consummerGroup, config)
 	if err != nil {
 		panic(err)
 	}
@@ -206,6 +256,7 @@ func main() {
 	// Define a GET request handler at '/'
 	router.GET("/producer-only", producerOneHandler)
 	router.GET("/producer", producerHandler)
+	router.GET("/producer-order", producerOrderHandler)
 	router.GET("/consumer", consumerHandler)
 	router.GET("/consumer-stop", consumerStopHandler)
 	router.POST("/producer", producerHasDataHandler)
