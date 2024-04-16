@@ -15,8 +15,8 @@ import (
 )
 
 var producer sarama.SyncProducer
-var topic = "many_partitions"
-var consummerGroup = "group_many_partitions"
+var topic = "khai_topic"
+var consummerGroup = "khai_consumer"
 var ip = "192.168.2.39:9092"
 
 var group sarama.ConsumerGroup
