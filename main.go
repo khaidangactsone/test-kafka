@@ -17,7 +17,7 @@ import (
 var producer sarama.SyncProducer
 var topic = "many_partitions"
 var consummerGroup = "group_many_partitions"
-var ip = "192.168.2.45:9092"
+var ip = "192.168.2.39:9092"
 
 var group sarama.ConsumerGroup
 
